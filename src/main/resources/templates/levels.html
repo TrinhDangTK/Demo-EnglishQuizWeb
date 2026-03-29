@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Levels')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+  <div class="breadcrumb">
+    <a th:href="@{/}">Categories</a>
+    <span class="bc-sep">›</span>
+    <span th:text="${category != null ? category.title : 'Select Level'}">Select Level</span>
+  </div>
+
+  <h1 class="page-title">Choose a Level</h1>
+  <p class="page-sub">Levels range from 1 (beginner) to 15 (advanced). Level 10+ is above average English skill.</p>
+  <div th:if="${!loggedIn}" class="auth-hint">
+    Please <a th:href="@{/login}">login</a> or <a th:href="@{/register}">register</a> to start a quiz.
+  </div>
+
+  <div th:if="${levels == null or #lists.isEmpty(levels)}" class="empty-box">
+    <h3>No levels available</h3>
+    <p>No levels have been added for this category yet.</p>
+    <a class="btn btn-ghost" style="margin-top: 1rem;" th:href="@{/}">Back to Categories</a>
+  </div>
+
+  <div th:if="${levels != null and !#lists.isEmpty(levels)}">
+    <div class="level-grid">
+      <a class="level-badge" th:each="lv : ${levels}"
+         th:href="@{'/quiz/' + ${lv.categoryId} + '/' + ${lv.id}}"
+         th:attr="data-level-id=${lv.id}"
+         th:title="'Start Level ' + ${lv.levelName}">
+        <span class="level-num" th:text="${lv.levelName}">1</span>
+        <span class="level-lbl">Level</span>
+      </a>
+    </div>
+
+    <div style="margin-top: 1.8rem;">
+      <a class="btn btn-ghost btn-sm" th:href="@{/}">← Back to Categories</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

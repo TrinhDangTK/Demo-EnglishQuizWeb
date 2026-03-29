@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Quiz')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+  <div class="breadcrumb">
+    <a th:href="@{/}">Categories</a>
+    <span class="bc-sep">›</span>
+    <span>Quiz</span>
+  </div>
+
+  <div class="quiz-wrapper">
+    <aside class="quiz-sidebar">
+      <div>
+        <div class="sidebar-label">Progress</div>
+        <div class="score-chip" style="margin-top: 10px;">
+          <div class="sc-val"><span th:text="${answeredCount}">0</span></div>
+          <div class="sc-sub">answered of <span th:text="${totalQuestions}">0</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sidebar-label" style="margin-bottom: 10px;">Questions</div>
+        <div class="dots-grid">
+          <form th:action="@{/quiz/answer}" method="post" style="display: contents;">
+            <input type="hidden" name="answerIds" value=""/>
+            <th:block th:each="i : ${#numbers.sequence(0, totalQuestions - 1)}">
+              <button type="submit"
+                      th:name="action"
+                      th:value="'goto-' + ${i}"
+                      class="dot-btn"
+                      th:classappend="${(i == currentIndex ? 'active' : '') + ' ' + (quizSession.isAnswered(quizSession.questionIds[i]) ? 'done' : '')}"
+                      th:text="${i + 1}"
+                      th:title="'Go to question ' + ${i + 1}">1</button>
+            </th:block>
+          </form>
+        </div>
+      </div>
+
+      <a class="btn btn-ghost btn-sm" th:href="@{'/levels/' + ${quizSession.categoryId}}" style="margin-top: 4px;">
+        ← Exit Quiz
+      </a>
+    </aside>
+
+    <main class="question-panel">
+      <form th:action="@{/quiz/answer}" method="post">
+        <section class="q-card">
+          <div class="q-head">
+            <span class="q-index" th:text="'Question ' + ${currentIndex + 1} + ' / ' + ${totalQuestions}">Question 1 / 10</span>
+            <span class="q-type" th:text="${question.type == 'M' ? 'Multi choice' : 'Single choice'}">Single choice</span>
+          </div>
+
+          <h2 class="q-title" th:text="${question.title}">Question title</h2>
+
+          <div class="q-media" th:if="${question.mediaUrl != null and !#strings.isEmpty(question.mediaUrl)}">
+            <img th:src="${question.mediaUrl}" th:alt="'Image for: ' + ${question.title}" loading="lazy"/>
+          </div>
+
+          <div class="answers-wrap">
+            <th:block th:each="answer : ${question.answers}">
+              <label class="answer-item" th:attr="data-answer-id=${answer.id}">
+                <input th:if="${question.type == 'M'}"
+                       type="checkbox"
+                       name="answerIds"
+                       th:value="${answer.id}"
+                       th:checked="${selectedAnswers.contains(answer.id)}"
+                       th:id="'answer-' + ${answer.id}"/>
+                <input th:if="${question.type != 'M'}"
+                       type="radio"
+                       name="answerIds"
+                       th:value="${answer.id}"
+                       th:checked="${selectedAnswers.contains(answer.id)}"
+                       th:id="'answer-' + ${answer.id}"/>
+                <span class="al" th:text="${answer.label}">A</span>
+                <span th:text="${answer.text}">Answer text</span>
+              </label>
+            </th:block>
+          </div>
+
+          <div class="q-actions">
+            <button type="submit"
+                    name="action"
+                    value="previous"
+                    class="btn btn-ghost btn-sm"
+                    th:disabled="${currentIndex == 0}">← Previous</button>
+
+            <button th:if="${!isLastQuestion}"
+                    type="submit"
+                    name="action"
+                    value="next"
+                    class="btn btn-primary btn-sm">Next →</button>
+
+            <button
+                    type="submit"
+                    name="action"
+                    value="submit"
+                    class="btn btn-ghost btn-sm"
+                    th:text="${isLastQuestion} ? 'Submit Quiz' : 'Finish Now'">Submit Quiz</button>
+          </div>
+        </section>
+      </form>
+    </main>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
+</script>
+
+</body>
+</html>

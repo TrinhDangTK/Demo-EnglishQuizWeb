@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Admin Quiz Management')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+  <div class="breadcrumb">
+    <a th:href="@{/}">Home</a>
+    <span class="bc-sep">›</span>
+    <span>Admin</span>
+  </div>
+
+  <h1 class="page-title">Quiz Management</h1>
+  <p class="page-sub">CRUD for categories, levels, questions and answers.</p>
+
+  <div class="alert alert-success" th:if="${success}" th:text="${success}">Success</div>
+  <div class="alert alert-error" th:if="${error}" th:text="${error}">Error</div>
+
+  <section class="admin-section">
+    <h2>Categories</h2>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Create New Category</h3>
+      <form class="admin-form" th:action="@{/admin/categories/create}" method="post">
+        <input type="number" name="id" placeholder="Id" required/>
+        <input type="text" name="title" placeholder="Title" required/>
+        <button class="btn btn-primary btn-sm" type="submit">Create</button>
+      </form>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Update / Delete Categories</h3>
+      <div class="admin-list">
+        <form class="admin-form inline" th:each="c : ${categories}" th:action="@{/admin/categories/update}" method="post">
+          <input type="number" name="id" th:value="${c.id}" readonly/>
+          <input type="text" name="title" th:value="${c.title}" required/>
+          <button class="btn btn-ghost btn-sm" type="submit">Update</button>
+          <button class="btn btn-sm btn-danger" type="submit" th:formaction="@{/admin/categories/delete}">Delete</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <h2>Levels</h2>
+    <div class="admin-toolbar">
+      <label>Filter by category:</label>
+      <select id="levelCategoryFilter">
+        <option value="">All categories</option>
+        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+      </select>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Create New Level</h3>
+      <form class="admin-form" th:action="@{/admin/levels/create}" method="post">
+        <input type="number" name="id" placeholder="Id" required/>
+        <select name="categoryId" required>
+          <option value="">Select category</option>
+          <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+        </select>
+        <input type="text" name="levelName" placeholder="Level Name" required/>
+        <button class="btn btn-primary btn-sm" type="submit">Create</button>
+      </form>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Update / Delete Levels</h3>
+      <div class="admin-list">
+        <form class="admin-form inline level-row" th:each="lv : ${levels}" th:action="@{/admin/levels/update}" method="post" th:attr="data-category-id=${lv.categoryId}">
+          <input type="number" name="id" th:value="${lv.id}" readonly/>
+          <select name="categoryId" required>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:selected="${c.id == lv.categoryId}" th:text="${c.title}">Category</option>
+          </select>
+          <input type="text" name="levelName" th:value="${lv.levelName}" required/>
+          <button class="btn btn-ghost btn-sm" type="submit">Update</button>
+          <button class="btn btn-sm btn-danger" type="submit" th:formaction="@{/admin/levels/delete}">Delete</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <h2>Questions</h2>
+    <div class="admin-toolbar">
+      <label>Filter by category:</label>
+      <select id="questionCategoryFilter">
+        <option value="">All categories</option>
+        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+      </select>
+      <label>Level:</label>
+      <select id="questionLevelFilter">
+        <option value="">All levels</option>
+        <option th:each="lv : ${levels}" th:value="${lv.id}" th:attr="data-category-id=${lv.categoryId}" th:text="${lv.levelName}">Level</option>
+      </select>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Create New Question</h3>
+      <form class="admin-form" th:action="@{/admin/questions/create}" method="post">
+        <input type="number" name="id" placeholder="Id" required/>
+        <select id="questionCreateCategory">
+          <option value="">Select category</option>
+          <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+        </select>
+        <select name="levelId" id="questionCreateLevel" required>
+          <option value="">Select level</option>
+          <option th:each="lv : ${levels}" th:value="${lv.id}" th:attr="data-category-id=${lv.categoryId}" th:text="${lv.levelName}">Level</option>
+        </select>
+        <input type="text" name="title" placeholder="Title" required/>
+        <select name="type">
+          <option value="S">Single</option>
+          <option value="M">Multiple</option>
+        </select>
+        <input type="text" name="mediaUrl" placeholder="Media URL"/>
+        <input type="text" name="explaination" placeholder="Explanation"/>
+        <button class="btn btn-primary btn-sm" type="submit">Create</button>
+      </form>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Update / Delete Questions</h3>
+      <div class="admin-list">
+        <form class="admin-form inline question-row" th:each="q : ${questions}" th:action="@{/admin/questions/update}" method="post">
+          <input type="number" name="id" th:value="${q.id}" readonly/>
+          <select class="question-row-category">
+            <option value="">Select category</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+          </select>
+          <select name="levelId" class="question-row-level" required th:attr="data-current-level-id=${q.levelId}">
+            <option th:each="lv : ${levels}" th:value="${lv.id}" th:attr="data-category-id=${lv.categoryId}" th:selected="${lv.id == q.levelId}" th:text="${lv.levelName}">Level</option>
+          </select>
+          <input type="text" name="title" th:value="${q.title}" required/>
+          <select name="type">
+            <option value="S" th:selected="${q.type == 'S'}">Single</option>
+            <option value="M" th:selected="${q.type == 'M'}">Multiple</option>
+          </select>
+          <input type="text" name="mediaUrl" th:value="${q.mediaUrl}" placeholder="Media URL"/>
+          <input type="text" name="explaination" th:value="${q.explaination}" placeholder="Explanation"/>
+          <button class="btn btn-ghost btn-sm" type="submit">Update</button>
+          <button class="btn btn-sm btn-danger" type="submit" th:formaction="@{/admin/questions/delete}">Delete</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-section">
+    <h2>Answers</h2>
+    <div class="admin-toolbar">
+      <label>Filter by category:</label>
+      <select id="answerCategoryFilter">
+        <option value="">All categories</option>
+        <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+      </select>
+      <label>Level:</label>
+      <select id="answerLevelFilter">
+        <option value="">All levels</option>
+        <option th:each="lv : ${levels}" th:value="${lv.id}" th:attr="data-category-id=${lv.categoryId}" th:text="${lv.levelName}">Level</option>
+      </select>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Create New Answer</h3>
+      <form class="admin-form" th:action="@{/admin/answers/create}" method="post">
+        <input type="number" name="id" placeholder="Id" required/>
+        <select id="answerCreateCategory">
+          <option value="">Select category</option>
+          <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+        </select>
+        <select id="answerCreateLevel">
+          <option value="">Select level</option>
+          <option th:each="lv : ${levels}"
+                  th:value="${lv.id}"
+                  th:attr="data-category-id=${lv.categoryId}"
+                  th:text="${lv.levelName}">Level</option>
+        </select>
+        <select name="questionId" id="answerCreateQuestion" required>
+          <option value="">Select question</option>
+          <option th:each="q : ${questions}"
+                  th:value="${q.id}"
+                  th:attr="data-level-id=${q.levelId}"
+                  th:text="${q.id + ' - ' + q.title}">Question</option>
+        </select>
+        <input type="text" name="label" placeholder="Label (A/B/C/D)" required/>
+        <input type="text" name="text" placeholder="Answer text" required/>
+        <label class="admin-check"><input type="checkbox" name="isCorrect" value="true"/> Correct</label>
+        <button class="btn btn-primary btn-sm" type="submit">Create</button>
+      </form>
+    </div>
+    <div class="admin-block">
+      <h3 class="admin-subtitle">Update / Delete Answers</h3>
+      <div class="admin-list">
+        <form class="admin-form inline answer-row" th:each="a : ${answers}" th:action="@{/admin/answers/update}" method="post">
+          <input type="number" name="id" th:value="${a.id}" readonly/>
+          <select class="answer-row-category">
+            <option value="">Select category</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.title}">Category</option>
+          </select>
+          <select class="answer-row-level">
+            <option value="">Select level</option>
+            <option th:each="lv : ${levels}" th:value="${lv.id}" th:attr="data-category-id=${lv.categoryId}" th:text="${lv.levelName}">Level</option>
+          </select>
+          <select name="questionId" class="answer-row-question" required th:attr="data-current-question-id=${a.questionId}">
+            <option th:each="q : ${questions}"
+                    th:value="${q.id}"
+                    th:attr="data-level-id=${q.levelId}"
+                    th:selected="${q.id == a.questionId}"
+                    th:text="${q.id + ' - ' + q.title}">Question</option>
+          </select>
+          <input type="text" name="label" th:value="${a.label}" required/>
+          <input type="text" name="text" th:value="${a.text}" required/>
+          <label class="admin-check"><input type="checkbox" name="isCorrect" value="true" th:checked="${a.correct}"/> Correct</label>
+          <button class="btn btn-ghost btn-sm" type="submit">Update</button>
+          <button class="btn btn-sm btn-danger" type="submit" th:formaction="@{/admin/answers/delete}">Delete</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer th:replace="~{_layout :: footer}"></footer>
+
+<script>
+  (() => {
+    const filterRowsByCategory = (filterSelectId, rowSelector) => {
+      const filter = document.getElementById(filterSelectId);
+      const rows = Array.from(document.querySelectorAll(rowSelector));
+      if (!filter || !rows.length) return;
+      const apply = () => {
+        const value = filter.value;
+        rows.forEach((row) => {
+          row.style.display = (!value || row.dataset.categoryId === value) ? '' : 'none';
+        });
+      };
+      filter.addEventListener('change', apply);
+      apply();
+    };
+
+    const bindDependentLevel = (categorySelect, levelSelect) => {
+      if (!categorySelect || !levelSelect) return;
+      const options = Array.from(levelSelect.querySelectorAll('option'));
+      const filterOptions = () => {
+        const categoryId = categorySelect.value;
+        const currentValue = levelSelect.value;
+        options.forEach((opt) => {
+          if (!opt.value) {
+            opt.hidden = false;
+            return;
+          }
+          const isMatch = !categoryId || opt.dataset.categoryId === categoryId;
+          opt.hidden = !isMatch;
+        });
+        const selectedOption = levelSelect.selectedOptions[0];
+        if (selectedOption && selectedOption.hidden) {
+          levelSelect.value = '';
+        } else if (currentValue) {
+          levelSelect.value = currentValue;
+        }
+      };
+      categorySelect.addEventListener('change', filterOptions);
+      filterOptions();
+    };
+
+    const bindDependentQuestion = (levelSelect, questionSelect, questionLevelMap) => {
+      if (!levelSelect || !questionSelect) return;
+      const options = Array.from(questionSelect.querySelectorAll('option'));
+      const filterOptions = () => {
+        const levelId = levelSelect.value;
+        const currentValue = questionSelect.value;
+        options.forEach((opt) => {
+          if (!opt.value) {
+            opt.hidden = false;
+            return;
+          }
+          const questionLevel = questionLevelMap[opt.value] || '';
+          const isMatch = !levelId || questionLevel === levelId;
+          opt.hidden = !isMatch;
+        });
+        const selectedOption = questionSelect.selectedOptions[0];
+        if (selectedOption && selectedOption.hidden) {
+          questionSelect.value = '';
+        } else if (currentValue) {
+          questionSelect.value = currentValue;
+        }
+      };
+      levelSelect.addEventListener('change', filterOptions);
+      filterOptions();
+    };
+
+    const createCategory = document.getElementById('questionCreateCategory');
+    const createLevel = document.getElementById('questionCreateLevel');
+    bindDependentLevel(createCategory, createLevel);
+
+    const levelCategoryMap = {};
+    Array.from(document.querySelectorAll('#questionCreateLevel option[data-category-id]')).forEach((opt) => {
+      levelCategoryMap[opt.value] = opt.dataset.categoryId;
+    });
+
+    Array.from(document.querySelectorAll('.question-row')).forEach((row) => {
+      const categorySelect = row.querySelector('.question-row-category');
+      const levelSelect = row.querySelector('.question-row-level');
+      if (!categorySelect || !levelSelect) return;
+      const levelId = levelSelect.dataset.currentLevelId || levelSelect.value;
+      const categoryId = levelCategoryMap[levelId] || '';
+      categorySelect.value = categoryId;
+      row.dataset.categoryId = categoryId;
+      row.dataset.levelId = levelId;
+      bindDependentLevel(categorySelect, levelSelect);
+      levelSelect.addEventListener('change', () => {
+        const selected = levelSelect.selectedOptions[0];
+        if (selected) {
+          row.dataset.categoryId = selected.dataset.categoryId || '';
+          row.dataset.levelId = selected.value || '';
+        }
+      });
+    });
+
+    const questionLevelMap = {};
+    const questionCategoryMap = {};
+    Array.from(document.querySelectorAll('#answerCreateQuestion option[data-level-id]')).forEach((opt) => {
+      const levelId = opt.dataset.levelId || '';
+      questionLevelMap[opt.value] = levelId;
+      const categoryId = levelCategoryMap[levelId] || '';
+      questionCategoryMap[opt.value] = categoryId;
+    });
+
+    const answerCreateCategory = document.getElementById('answerCreateCategory');
+    const answerCreateLevel = document.getElementById('answerCreateLevel');
+    const answerCreateQuestion = document.getElementById('answerCreateQuestion');
+    bindDependentLevel(answerCreateCategory, answerCreateLevel);
+    bindDependentQuestion(answerCreateLevel, answerCreateQuestion, questionLevelMap);
+
+    Array.from(document.querySelectorAll('.answer-row')).forEach((row) => {
+      const categorySelect = row.querySelector('.answer-row-category');
+      const levelSelect = row.querySelector('.answer-row-level');
+      const questionSelect = row.querySelector('.answer-row-question');
+      if (!categorySelect || !levelSelect || !questionSelect) return;
+      const questionId = questionSelect.dataset.currentQuestionId || questionSelect.value;
+      const levelId = questionLevelMap[questionId] || '';
+      const categoryId = questionCategoryMap[questionId] || '';
+      categorySelect.value = categoryId;
+      levelSelect.value = levelId;
+      row.dataset.categoryId = categoryId;
+      row.dataset.levelId = levelId;
+      bindDependentLevel(categorySelect, levelSelect);
+      bindDependentQuestion(levelSelect, questionSelect, questionLevelMap);
+      levelSelect.addEventListener('change', () => {
+        const mappedCategoryId = levelCategoryMap[levelSelect.value] || '';
+        row.dataset.levelId = levelSelect.value || '';
+        row.dataset.categoryId = mappedCategoryId;
+        if (mappedCategoryId) {
+          categorySelect.value = mappedCategoryId;
+        }
+      });
+      questionSelect.addEventListener('change', () => {
+        const selectedQuestionId = questionSelect.value;
+        const mappedLevelId = questionLevelMap[selectedQuestionId] || '';
+        const mappedCategoryId = questionCategoryMap[selectedQuestionId] || '';
+        if (mappedLevelId) {
+          levelSelect.value = mappedLevelId;
+        }
+        row.dataset.levelId = mappedLevelId;
+        row.dataset.categoryId = mappedCategoryId;
+        if (mappedCategoryId) {
+          categorySelect.value = mappedCategoryId;
+        }
+      });
+    });
+
+    const answerCategoryFilter = document.getElementById('answerCategoryFilter');
+    const answerLevelFilter = document.getElementById('answerLevelFilter');
+    const answerRows = Array.from(document.querySelectorAll('.answer-row'));
+    if (answerCategoryFilter && answerLevelFilter) {
+      bindDependentLevel(answerCategoryFilter, answerLevelFilter);
+      const filterAnswerRows = () => {
+        const categoryValue = answerCategoryFilter.value;
+        const levelValue = answerLevelFilter.value;
+        answerRows.forEach((row) => {
+          const byCategory = !categoryValue || row.dataset.categoryId === categoryValue;
+          const byLevel = !levelValue || row.dataset.levelId === levelValue;
+          row.style.display = (byCategory && byLevel) ? '' : 'none';
+        });
+      };
+      answerCategoryFilter.addEventListener('change', filterAnswerRows);
+      answerLevelFilter.addEventListener('change', filterAnswerRows);
+      filterAnswerRows();
+    }
+
+    filterRowsByCategory('levelCategoryFilter', '.level-row');
+    const questionCategoryFilter = document.getElementById('questionCategoryFilter');
+    const questionLevelFilter = document.getElementById('questionLevelFilter');
+    const questionRows = Array.from(document.querySelectorAll('.question-row'));
+    if (questionCategoryFilter && questionLevelFilter) {
+      bindDependentLevel(questionCategoryFilter, questionLevelFilter);
+      const filterQuestionRows = () => {
+        const categoryValue = questionCategoryFilter.value;
+        const levelValue = questionLevelFilter.value;
+        questionRows.forEach((row) => {
+          const byCategory = !categoryValue || row.dataset.categoryId === categoryValue;
+          const byLevel = !levelValue || row.dataset.levelId === levelValue;
+          row.style.display = (byCategory && byLevel) ? '' : 'none';
+        });
+      };
+      questionCategoryFilter.addEventListener('change', filterQuestionRows);
+      questionLevelFilter.addEventListener('change', filterQuestionRows);
+      filterQuestionRows();
+    }
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:fragment="head(title)">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="${title} ? ${title} + ' — English Quiz' : 'English Quiz'">English Quiz</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+
+<body>
+
+<nav th:fragment="navbar" class="navbar">
+  <a class="navbar-brand" th:href="@{/}">English<em>Quiz</em></a>
+  <div class="navbar-search">
+    <input id="categorySearchInput" type="search" placeholder="Search category..."/>
+  </div>
+  <div class="navbar-actions">
+    <th:block th:if="${loggedIn}">
+      <a th:if="${isAdmin}" class="btn btn-ghost btn-sm" th:href="@{/admin/quizzes}">Admin</a>
+      <span class="navbar-user" th:text="'Hi, ' + ${currentUsername}">Hi, user</span>
+      <a class="btn btn-ghost btn-sm" th:href="@{/logout}">Logout</a>
+    </th:block>
+    <th:block th:unless="${loggedIn}">
+      <a class="btn btn-ghost btn-sm" th:href="@{/login}">Login</a>
+      <a class="btn btn-primary btn-sm" th:href="@{/register}">Register</a>
+    </th:block>
+  </div>
+</nav>
+
+<footer th:fragment="footer" class="site-footer">
+  <div class="site-footer-inner">
+    <p>English Quiz Practice</p>
+    <p>Keep learning every day.</p>
+  </div>
+</footer>
+
+<div th:fragment="breadcrumb(items)" class="breadcrumb">
+  <th:block th:each="item, iterStat : ${items}">
+    <a th:if="${item.url != null}" th:href="${item.url}" th:text="${item.label}">Link</a>
+    <span th:if="${item.url == null}" th:text="${item.label}">Current</span>
+    <span th:if="${!iterStat.last}" class="bc-sep">›</span>
+  </th:block>
+</div>
+
+</body>
+</html>

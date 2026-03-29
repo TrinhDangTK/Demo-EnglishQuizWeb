@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Login')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper auth-wrapper">
+  <div class="auth-card">
+    <h1 class="page-title">Login</h1>
+    <p class="page-sub">Sign in to start doing quizzes.</p>
+
+    <div class="alert alert-error" th:if="${error}" th:text="${error}">Error</div>
+    <div class="alert alert-success" th:if="${success}" th:text="${success}">Success</div>
+
+    <form th:action="@{/login}" method="post" class="auth-form">
+      <input type="hidden" name="redirect" th:value="${param.redirect != null ? param.redirect[0] : ''}"/>
+
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" maxlength="30" required/>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required/>
+
+      <label class="remember-row">
+        <input type="checkbox" name="rememberMe" value="true"/>
+        Remember login
+      </label>
+
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <p class="auth-footer">No account yet? <a th:href="@{/register}">Create one</a></p>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Register')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper auth-wrapper">
+  <div class="auth-card">
+    <h1 class="page-title">Register</h1>
+    <p class="page-sub">Create an account to do quizzes and track your progress in session.</p>
+
+    <div class="alert alert-error" th:if="${error}" th:text="${error}">Error</div>
+
+    <form th:action="@{/register}" method="post" class="auth-form">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" maxlength="30" required/>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" minlength="6" required/>
+
+      <label for="confirmPassword">Confirm password</label>
+      <input id="confirmPassword" name="confirmPassword" type="password" minlength="6" required/>
+
+      <button type="submit" class="btn btn-primary">Register</button>
+    </form>
+
+    <p class="auth-footer">Already have an account? <a th:href="@{/login}">Login here</a></p>
+  </div>
+</div>
+
+</body>
+</html>

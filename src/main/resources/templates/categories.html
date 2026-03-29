@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Categories')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+  <div class="breadcrumb mini">
+    <a th:href="@{/}">EnglishQuiz</a>
+    <span class="bc-sep">›</span>
+    <span>Quizzes</span>
+  </div>
+
+  <section class="quiz-index-head">
+    <h1 class="quiz-index-title">Quizzes</h1>
+    <p class="quiz-index-sub">Choose a category to practise grammar, vocabulary, speaking, listening, reading and more.</p>
+  </section>
+
+  <div th:if="${#lists.isEmpty(categories)}" class="empty-box">
+    <h3>No categories yet</h3>
+    <p>Add categories to the database to get started.</p>
+  </div>
+
+  <div id="categoryResultInfo" class="category-result-info" th:unless="${#lists.isEmpty(categories)}"></div>
+
+  <div id="quizIndexGrid" class="quiz-index-grid" th:unless="${#lists.isEmpty(categories)}">
+    <a class="quiz-link-item"
+       th:each="cat : ${categories}"
+       th:href="@{'/category/' + ${cat.id}}"
+       th:attr="data-category-title=${cat.title},data-category-id=${cat.id}">
+      <span class="quiz-link-title" th:text="${cat.title}">Grammar Quizzes</span>
+      <span class="quiz-link-desc">Improve your English skills step by step.</span>
+    </a>
+  </div>
+
+  <div class="quiz-tip-box" th:unless="${#lists.isEmpty(categories)}">
+    <h3>EnglishQuiz Tip</h3>
+    <p>You can do all quizzes on smartphone, tablet, or desktop. Learn a little every day for better results.</p>
+  </div>
+
+  <div class="quiz-tip-box light" th:unless="${#lists.isEmpty(categories)}">
+    <h3>Learning Through Play</h3>
+    <p>Quizzes make learning feel like a game, so it is easier to keep motivation and build habits.</p>
+  </div>
+</div>
+
+<footer th:replace="~{_layout :: footer}"></footer>
+
+<script>
+  (() => {
+    const input = document.getElementById('categorySearchInput');
+    const grid = document.getElementById('quizIndexGrid');
+    const resultInfo = document.getElementById('categoryResultInfo');
+    if (!input || !grid) return;
+
+    let timer = null;
+    let pendingController = null;
+    const description = 'Improve your English skills step by step.';
+
+    const renderCategories = (categories) => {
+      if (!categories.length) {
+        grid.innerHTML = '';
+        resultInfo.textContent = 'No categories found.';
+        return;
+      }
+      grid.innerHTML = '';
+      categories.forEach((cat) => {
+        const item = document.createElement('a');
+        item.className = 'quiz-link-item';
+        item.href = `/category/${cat.id}`;
+        item.dataset.categoryTitle = cat.title;
+        item.dataset.categoryId = `${cat.id}`;
+
+        const title = document.createElement('span');
+        title.className = 'quiz-link-title';
+        title.textContent = cat.title;
+
+        const desc = document.createElement('span');
+        desc.className = 'quiz-link-desc';
+        desc.textContent = description;
+
+        item.appendChild(title);
+        item.appendChild(desc);
+        grid.appendChild(item);
+      });
+      resultInfo.textContent = `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} found`;
+    };
+
+    const loadCategories = async () => {
+      const keyword = input.value.trim();
+      if (pendingController) pendingController.abort();
+      pendingController = new AbortController();
+      resultInfo.textContent = 'Searching...';
+      grid.classList.add('is-loading');
+      try {
+        const params = new URLSearchParams({ keyword });
+        const response = await fetch(`/api/categories/search?${params.toString()}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: pendingController.signal
+        });
+        if (!response.ok) throw new Error('Failed search request');
+        const categories = await response.json();
+        renderCategories(categories);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          resultInfo.textContent = 'Cannot load categories now. Please retry.';
+        }
+      } finally {
+        grid.classList.remove('is-loading');
+      }
+    };
+
+    input.addEventListener('input', () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(loadCategories, 280);
+    });
+  })();
+</script>
+
+</body>
+</html>
