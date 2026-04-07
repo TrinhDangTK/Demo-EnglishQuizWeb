@@ -17,6 +17,12 @@ Web app luyện tập tiếng Anh theo luồng **Category → Level → Quiz** v
 | Nộp bài & xem kết quả | Điểm, đánh dấu đúng/sai từng câu, giải thích |
 | Reset bài | Xóa tiến trình, làm lại từ đầu |
 | Tiến độ học (`/progress`) | Xem trạng thái từng level theo category (chưa học / đang làm / đã hoàn thành + điểm) |
+| Chat với AI | Hỏi đáp về ngữ pháp, từ vựng, hướng dẫn làm bài (không cho đáp án trực tiếp) |
+| Nâng cấp VIP | Thanh toán qua MoMo để truy cập nội dung premium (Listening) |
+
+### Phân quyền và Tier
+- **Normal (Miễn phí)**: Truy cập Grammar Basics, Vocabulary, Reading Comprehension
+- **VIP (Trả phí - 199,000 VND)**: Truy cập tất cả categories bao gồm Listening, và các tính năng premium tương lai
 
 ### Admin
 | Tính năng | Mô tả |
@@ -38,6 +44,8 @@ Web app luyện tập tiếng Anh theo luồng **Category → Level → Quiz** v
 | MySQL | 8+ |
 | Lombok | Giảm boilerplate code |
 | spring-security-crypto | Hash mật khẩu với BCrypt |
+| Google Gemini API | Chat AI hỗ trợ học tiếng Anh |
+| MoMo Payment API | Thanh toán nâng cấp VIP |
 | gTTS (Python) | Tạo file mp3 mẫu cho category Listening |
 
 ---
@@ -53,11 +61,14 @@ EnglishQuiz/
 │   │   ├─ ProgressController.java    # Trang tiến độ học /progress
 │   │   ├─ QuizController.java        # Làm bài, lưu đáp án, nộp bài
 │   │   ├─ CategoryController.java    # Trang chủ + search
+│   │   ├─ ChatController.java        # API chat với AI (Gemini)
+│   │   ├─ UpgradeController.java     # Trang nâng cấp VIP, thanh toán MoMo
 │   │   ├─ AdminQuizController.java   # CRUD admin
 │   │   └─ GlobalModelAttributes.java # Inject loggedIn/currentUser vào mọi view
 │   ├─ service/
 │   │   ├─ QuizService.java           # Chấm điểm
-│   │   └─ QuizProgressService.java   # Lưu/nạp tiến trình làm bài
+│   │   ├─ QuizProgressService.java   # Lưu/nạp tiến trình làm bài
+│   │   └─ MomoService.java           # Tích hợp thanh toán MoMo
 │   ├─ model/                         # JPA entities
 │   ├─ repository/                    # Spring Data repositories
 │   ├─ dto/                           # QuizSession (trạng thái bài làm trong session)
@@ -72,16 +83,19 @@ EnglishQuiz/
 │   │   ├─ result.html                # Kết quả chi tiết
 │   │   ├─ progress.html              # Tiến độ học của user
 │   │   ├─ profile.html               # Hồ sơ cá nhân
+│   │   ├─ upgrade.html               # Trang nâng cấp VIP
 │   │   ├─ login.html                 # Đăng nhập
 │   │   └─ register.html              # Đăng ký
 │   ├─ static/
 │   │   ├─ css/style.css              # Toàn bộ style
-│   │   ├─ js/password-toggle.js      # Toggle hiện/ẩn mật khẩu
+│   │   ├─ js/
+│   │   │   ├─ password-toggle.js     # Toggle hiện/ẩn mật khẩu
+│   │   │   └─ chat.js                # JavaScript cho chat AI
 │   │   └─ audio/                     # File mp3 cho category Listening
 │   └─ application.properties
 │
 ├─ data.sql                           # Dữ liệu mẫu (grammar, vocab, reading)
-├─ listening_data.sql                 # Dữ liệu mẫu category Listening (audio)
+├─ listening_data.sql                 # Dữ liệu mẫu category Listening (audio, VIP only)
 └─ pom.xml
 ```
 
@@ -98,17 +112,30 @@ EnglishQuiz/
 
 ## Cài đặt và chạy
 
-### Bước 1 — Cấu hình Database
+### Bước 1 — Cấu hình Database và API Keys
 
-Mở `src/main/resources/application.properties`, điền thông tin kết nối MySQL:
+Mở `src/main/resources/application.properties`, điền thông tin kết nối MySQL và API keys:
 
 ```properties
+# Database
 spring.datasource.url=jdbc:mysql://127.0.0.1:3306/english_quiz?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 spring.datasource.username=root
 spring.datasource.password=<MẬT_KHẨU_CỦA_BẠN>
+
+# Gemini AI Chat (từ Google AI Studio)
+gemini.api.key=your_gemini_api_key_here
+
+# MoMo Payment (test environment - đăng ký tại MoMo Developer)
+momo.partner-code=your_momo_partner_code
+momo.access-key=your_momo_access_key
+momo.secret-key=your_momo_secret_key
+momo.api-url=https://test-payment.momo.vn/v2/gateway/api/create
+momo.redirect-url=http://localhost:8080/upgrade/success
+momo.ipn-url=http://localhost:8080/upgrade/ipn
+momo.request-type=captureWallet
 ```
 
-> **Lưu ý bảo mật:** Không commit mật khẩu thật lên Git. Nên dùng biến môi trường hoặc Spring profile riêng cho production.
+> **Lưu ý bảo mật:** Không commit mật khẩu và API keys thật lên Git. Nên dùng biến môi trường hoặc Spring profile riêng cho production.
 
 ### Bước 2 — Khởi động ứng dụng
 
@@ -151,7 +178,13 @@ mysql -u root -p english_quiz < listening_data.sql
 
 ### Tạo tài khoản
 
-Truy cập `/register` để tạo tài khoản mới. Mọi tài khoản mới mặc định có role `USER`.
+Truy cập `/register` để tạo tài khoản mới. Mọi tài khoản mới mặc định có role `USER` và tier `NORMAL` (miễn phí).
+
+### Nâng cấp VIP
+
+- Truy cập `/upgrade` để thanh toán 199,000 VND qua MoMo
+- Sau khi thanh toán thành công, tier sẽ chuyển thành `VIP`
+- VIP có quyền truy cập category "Listening" và các tính năng premium khác
 
 ### Cấp quyền Admin
 
@@ -178,9 +211,11 @@ Admin có thể truy cập `/admin/quizzes` để quản lý toàn bộ ngân h�
 | `/logout` | Đăng xuất | — |
 | `/profile` | Hồ sơ cá nhân (đổi tên, email, mật khẩu) | Đăng nhập |
 | `/progress` | Trang tiến độ học cá nhân | Đăng nhập |
+| `/upgrade` | Nâng cấp tài khoản VIP (thanh toán MoMo) | Đăng nhập |
 | `/quiz/{categoryId}/{levelId}` | Làm bài quiz | Đăng nhập |
 | `/quiz/result` | Xem kết quả bài vừa nộp | Đăng nhập |
 | `/admin/quizzes` | Quản trị ngân hàng câu hỏi | Role ADMIN |
+| `/api/chat` | API chat với AI (POST) | Đăng nhập |
 
 ---
 
