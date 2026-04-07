@@ -25,12 +25,37 @@
   <div id="categoryResultInfo" class="category-result-info" th:unless="${#lists.isEmpty(categories)}"></div>
 
   <div id="quizIndexGrid" class="quiz-index-grid" th:unless="${#lists.isEmpty(categories)}">
+    <!-- Normal category (accessible by everyone) -->
     <a class="quiz-link-item"
        th:each="cat : ${categories}"
+       th:if="${!cat.vipOnly}"
        th:href="@{'/category/' + ${cat.id}}"
        th:attr="data-category-title=${cat.title},data-category-id=${cat.id}">
       <span class="quiz-link-title" th:text="${cat.title}">Grammar Quizzes</span>
       <span class="quiz-link-desc">Improve your English skills step by step.</span>
+    </a>
+
+    <!-- VIP category: accessible if user is VIP, locked if not -->
+    <a class="quiz-link-item"
+       th:each="cat : ${categories}"
+       th:if="${cat.vipOnly and isVip}"
+       th:href="@{'/category/' + ${cat.id}}"
+       th:attr="data-category-title=${cat.title},data-category-id=${cat.id}">
+      <span class="quiz-link-vip-badge">👑 VIP</span>
+      <span class="quiz-link-title" th:text="${cat.title}">Listening</span>
+      <span class="quiz-link-desc">Premium content for VIP members.</span>
+    </a>
+
+    <!-- VIP category: locked for Normal users -->
+    <a class="quiz-link-item quiz-link-item--locked"
+       th:each="cat : ${categories}"
+       th:if="${cat.vipOnly and !isVip}"
+       th:href="@{/upgrade}"
+       th:attr="data-category-title=${cat.title},data-category-id=${cat.id}">
+      <span class="quiz-link-lock">🔒</span>
+      <span class="quiz-link-vip-badge quiz-link-vip-badge--locked">👑 VIP</span>
+      <span class="quiz-link-title" th:text="${cat.title}">Listening</span>
+      <span class="quiz-link-desc">Upgrade to VIP to unlock this category.</span>
     </a>
   </div>
 
@@ -47,7 +72,7 @@
 
 <footer th:replace="~{_layout :: footer}"></footer>
 
-<script>
+<script th:inline="javascript">
   (() => {
     const input = document.getElementById('categorySearchInput');
     const grid = document.getElementById('quizIndexGrid');
@@ -57,6 +82,7 @@
     let timer = null;
     let pendingController = null;
     const description = 'Improve your English skills step by step.';
+    const isVip = /*[[${isVip}]]*/ false;
 
     const renderCategories = (categories) => {
       if (!categories.length) {
@@ -67,21 +93,58 @@
       grid.innerHTML = '';
       categories.forEach((cat) => {
         const item = document.createElement('a');
-        item.className = 'quiz-link-item';
-        item.href = `/category/${cat.id}`;
         item.dataset.categoryTitle = cat.title;
         item.dataset.categoryId = `${cat.id}`;
 
-        const title = document.createElement('span');
-        title.className = 'quiz-link-title';
-        title.textContent = cat.title;
+        if (cat.vipOnly && !isVip) {
+          // Locked VIP category
+          item.className = 'quiz-link-item quiz-link-item--locked';
+          item.href = '/upgrade';
 
-        const desc = document.createElement('span');
-        desc.className = 'quiz-link-desc';
-        desc.textContent = description;
+          const lock = document.createElement('span');
+          lock.className = 'quiz-link-lock';
+          lock.textContent = '🔒';
 
-        item.appendChild(title);
-        item.appendChild(desc);
+          const badge = document.createElement('span');
+          badge.className = 'quiz-link-vip-badge quiz-link-vip-badge--locked';
+          badge.textContent = '👑 VIP';
+
+          const title = document.createElement('span');
+          title.className = 'quiz-link-title';
+          title.textContent = cat.title;
+
+          const desc = document.createElement('span');
+          desc.className = 'quiz-link-desc';
+          desc.textContent = 'Upgrade to VIP to unlock this category.';
+
+          item.appendChild(lock);
+          item.appendChild(badge);
+          item.appendChild(title);
+          item.appendChild(desc);
+        } else {
+          // Accessible category
+          item.className = 'quiz-link-item';
+          item.href = `/category/${cat.id}`;
+
+          if (cat.vipOnly) {
+            const badge = document.createElement('span');
+            badge.className = 'quiz-link-vip-badge';
+            badge.textContent = '👑 VIP';
+            item.appendChild(badge);
+          }
+
+          const title = document.createElement('span');
+          title.className = 'quiz-link-title';
+          title.textContent = cat.title;
+
+          const desc = document.createElement('span');
+          desc.className = 'quiz-link-desc';
+          desc.textContent = cat.vipOnly ? 'Premium content for VIP members.' : description;
+
+          item.appendChild(title);
+          item.appendChild(desc);
+        }
+
         grid.appendChild(item);
       });
       resultInfo.textContent = `${categories.length} ${categories.length === 1 ? 'category' : 'categories'} found`;

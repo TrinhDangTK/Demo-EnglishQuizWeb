@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('Upgrade to VIP')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+  <div class="breadcrumb mini">
+    <a th:href="@{/}">EnglishQuiz</a>
+    <span class="bc-sep">›</span>
+    <span>Upgrade</span>
+  </div>
+
+  <div class="alert alert-error" th:if="${error}" th:text="${error}">Error</div>
+  <div class="alert alert-success" th:if="${success}" th:text="${success}">Success</div>
+
+  <!-- Already VIP -->
+  <div th:if="${alreadyVip}" class="upgrade-hero">
+    <div class="upgrade-card upgrade-card--active">
+      <div class="vip-crown">👑</div>
+      <h1>You are a VIP Member!</h1>
+      <p class="upgrade-sub">You have full access to all categories including Listening.</p>
+      <div class="tier-badge tier-badge--vip">VIP</div>
+      <a th:href="@{/}" class="btn btn-primary" style="margin-top:1.5rem;">Browse All Categories</a>
+    </div>
+  </div>
+
+  <!-- Not VIP yet -->
+  <div th:unless="${alreadyVip}" class="upgrade-hero">
+    <div class="upgrade-header">
+      <h1 class="page-title">Upgrade to VIP</h1>
+      <p class="page-sub">Unlock premium content and take your English skills to the next level.</p>
+    </div>
+
+    <div class="upgrade-comparison">
+      <!-- Normal Plan -->
+      <div class="plan-card">
+        <div class="plan-header">
+          <span class="tier-badge tier-badge--normal">Normal</span>
+          <div class="plan-price">Free</div>
+        </div>
+        <ul class="plan-features">
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Grammar Basics
+          </li>
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Vocabulary
+          </li>
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Reading Comprehension
+          </li>
+          <li class="plan-feature plan-feature--no">
+            <span class="pf-icon">🔒</span> Listening
+          </li>
+          <li class="plan-feature plan-feature--no">
+            <span class="pf-icon">🔒</span> Future Premium Content
+          </li>
+        </ul>
+        <div class="plan-footer">
+          <span class="plan-current">Your current plan</span>
+        </div>
+      </div>
+
+      <!-- VIP Plan -->
+      <div class="plan-card plan-card--vip">
+        <div class="plan-popular">Most Popular</div>
+        <div class="plan-header">
+          <span class="tier-badge tier-badge--vip">👑 VIP</span>
+          <div class="plan-price" th:text="${#numbers.formatInteger(vipPrice, 0, 'COMMA')} + ' VND'">199,000 VND</div>
+          <div class="plan-price-sub">one-time payment</div>
+        </div>
+        <ul class="plan-features">
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Grammar Basics
+          </li>
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Vocabulary
+          </li>
+          <li class="plan-feature plan-feature--yes">
+            <span class="pf-icon">✅</span> Reading Comprehension
+          </li>
+          <li class="plan-feature plan-feature--yes plan-feature--highlight">
+            <span class="pf-icon">🎧</span> <strong>Listening</strong>
+          </li>
+          <li class="plan-feature plan-feature--yes plan-feature--highlight">
+            <span class="pf-icon">🚀</span> <strong>All Future Content</strong>
+          </li>
+        </ul>
+        <div class="plan-footer">
+          <form th:action="@{/upgrade}" method="post">
+            <button type="submit" class="btn btn-momo">
+              <img src="https://developers.momo.vn/v3/img/logo.svg" alt="MoMo" class="momo-logo"/>
+              Pay with MoMo
+            </button>
+          </form>
+          <p class="plan-payment-info">Secure payment via MoMo • Card, ATM, QR supported</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="upgrade-payment-methods">
+      <p class="payment-methods-title">Accepted payment methods</p>
+      <div class="payment-icons">
+        <span class="payment-chip">💳 ATM / Debit Card</span>
+        <span class="payment-chip">📱 MoMo Wallet</span>
+        <span class="payment-chip">💳 Visa / Mastercard</span>
+        <span class="payment-chip">🏧 Internet Banking</span>
+      </div>
+    </div>
+
+    <div class="upgrade-note">
+      <p>🔒 Payments are securely processed by <strong>MoMo</strong> (test environment). Your financial data never touches our servers.</p>
+    </div>
+  </div>
+</div>
+
+<footer th:replace="~{_layout :: footer}"></footer>
+
+</body>
+</html>

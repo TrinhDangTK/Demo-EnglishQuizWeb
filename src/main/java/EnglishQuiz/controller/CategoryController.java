@@ -46,9 +46,10 @@ public class CategoryController {
         }
 
         return categories.stream()
-                .map(cat -> new CategorySearchItem(cat.getId(), cat.getTitle()))
+                .map(cat -> new CategorySearchItem(cat.getId(), cat.getTitle(),
+                        Boolean.TRUE.equals(cat.getVipOnly())))
                 .collect(Collectors.toList());
     }
 
-    public record CategorySearchItem(Integer id, String title) {}
+    public record CategorySearchItem(Integer id, String title, boolean vipOnly) {}
 }

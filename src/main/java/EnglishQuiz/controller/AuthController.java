@@ -26,7 +26,11 @@ import java.util.UUID;
 @Controller
 public class AuthController {
     public static final String SESSION_USER_KEY = "currentUsername";
+    public static final String SESSION_DISPLAY_NAME_KEY = "currentDisplayName";
     public static final String SESSION_ROLE_KEY = "currentUserRole";
+    public static final String SESSION_TIER_KEY = "currentUserTier";
+    public static final int TIER_NORMAL = 1;
+    public static final int TIER_VIP = 2;
     public static final String ROLE_ADMIN = "ADMIN";
     public static final String ROLE_USER = "USER";
     public static final String REMEMBER_ME_COOKIE = "remember_login_token";
@@ -74,7 +78,9 @@ public class AuthController {
         }
 
         session.setAttribute(SESSION_USER_KEY, user.getUsername());
+        session.setAttribute(SESSION_DISPLAY_NAME_KEY, resolveDisplayName(user));
         session.setAttribute(SESSION_ROLE_KEY, resolveRoleName(user.getRoleId()));
+        session.setAttribute(SESSION_TIER_KEY, user.getTier() != null ? user.getTier() : TIER_NORMAL);
         handleRememberMe(user.getUsername(), rememberMe, request, response);
         redirectAttributes.addFlashAttribute("success", "Login successful.");
         if (isSafeLocalRedirect(redirect)) {
@@ -122,7 +128,9 @@ public class AuthController {
         userAccountRepository.save(account);
 
         session.setAttribute(SESSION_USER_KEY, account.getUsername());
+        session.setAttribute(SESSION_DISPLAY_NAME_KEY, resolveDisplayName(account));
         session.setAttribute(SESSION_ROLE_KEY, resolveRoleName(account.getRoleId()));
+        session.setAttribute(SESSION_TIER_KEY, TIER_NORMAL);
         redirectAttributes.addFlashAttribute("success", "Account created and logged in.");
         return "redirect:/";
     }
@@ -233,5 +241,16 @@ public class AuthController {
             }
         }
         return null;
+    }
+
+    /** Label shown in the navbar: full name if set, otherwise username. */
+    public static String resolveDisplayName(UserAccount user) {
+        if (user == null) {
+            return "";
+        }
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName().trim();
+        }
+        return user.getUsername();
     }
 }

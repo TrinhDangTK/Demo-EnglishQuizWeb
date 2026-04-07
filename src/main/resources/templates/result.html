@@ -43,8 +43,25 @@
           <p class="r-title" th:text="${item.question.title}">Question title</p>
         </div>
 
+        <!-- Audio -->
+        <div class="r-image"
+             th:if="${item.question.mediaUrl != null and !#strings.isEmpty(item.question.mediaUrl)
+                      and (#strings.endsWith(item.question.mediaUrl,'.mp3')
+                        or #strings.endsWith(item.question.mediaUrl,'.ogg')
+                        or #strings.endsWith(item.question.mediaUrl,'.wav'))}">
+          <div class="audio-player-wrap audio-player-wrap--result">
+            <span class="audio-label">🔊 Audio clip</span>
+            <audio class="audio-player" controls preload="none" th:src="${item.question.mediaUrl}">
+              Your browser does not support audio.
+            </audio>
+          </div>
+        </div>
         <!-- Image -->
-        <div class="r-image" th:if="${item.question.mediaUrl != null and !#strings.isEmpty(item.question.mediaUrl)}">
+        <div class="r-image"
+             th:if="${item.question.mediaUrl != null and !#strings.isEmpty(item.question.mediaUrl)
+                      and !#strings.endsWith(item.question.mediaUrl,'.mp3')
+                      and !#strings.endsWith(item.question.mediaUrl,'.ogg')
+                      and !#strings.endsWith(item.question.mediaUrl,'.wav')}">
           <img th:src="${item.question.mediaUrl}" th:alt="'Image for question ' + ${iStat.index + 1}" loading="lazy"/>
         </div>
 

@@ -5,7 +5,9 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title th:text="${title} ? ${title} + ' — English Quiz' : 'English Quiz'">English Quiz</title>
-  <link rel="stylesheet" th:href="@{/css/style.css}"/>
+  <link rel="stylesheet" th:href="@{/css/style.css(v=7)}"/>
+  <script th:src="@{/js/password-toggle.js(v=5)}" defer></script>
+  <script th:src="@{/js/chat.js(v=2)}" defer></script>
 </head>
 
 <body>
@@ -18,7 +20,10 @@
   <div class="navbar-actions">
     <th:block th:if="${loggedIn}">
       <a th:if="${isAdmin}" class="btn btn-ghost btn-sm" th:href="@{/admin/quizzes}">Admin</a>
-      <span class="navbar-user" th:text="'Hi, ' + ${currentUsername}">Hi, user</span>
+      <a class="btn btn-ghost btn-sm" th:href="@{/progress}">Progress</a>
+      <a th:unless="${isVip}" class="btn btn-sm btn-upgrade-mini" th:href="@{/upgrade}">⚡ VIP</a>
+      <a class="btn btn-ghost btn-sm" th:href="@{/profile}">Profile</a>
+      <span class="navbar-user" th:text="'Hi, ' + ${currentDisplayName}">Hi, user</span>
       <a class="btn btn-ghost btn-sm" th:href="@{/logout}">Logout</a>
     </th:block>
     <th:block th:unless="${loggedIn}">

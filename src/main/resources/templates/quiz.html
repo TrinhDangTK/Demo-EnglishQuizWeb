@@ -55,7 +55,25 @@
 
           <h2 class="q-title" th:text="${question.title}">Question title</h2>
 
-          <div class="q-media" th:if="${question.mediaUrl != null and !#strings.isEmpty(question.mediaUrl)}">
+          <!-- Audio media -->
+          <div class="q-media q-media--audio"
+               th:if="${question.mediaUrl != null and !#strings.isEmpty(question.mediaUrl)
+                        and (#strings.endsWith(question.mediaUrl,'.mp3')
+                          or #strings.endsWith(question.mediaUrl,'.ogg')
+                          or #strings.endsWith(question.mediaUrl,'.wav'))}">
+            <div class="audio-player-wrap">
+              <span class="audio-label">🔊 Listen carefully before answering</span>
+              <audio class="audio-player" controls preload="auto" th:src="${question.mediaUrl}">
+                Your browser does not support audio.
+              </audio>
+            </div>
+          </div>
+          <!-- Image media -->
+          <div class="q-media"
+               th:if="${question.mediaUrl != null and !#strings.isEmpty(question.mediaUrl)
+                        and !#strings.endsWith(question.mediaUrl,'.mp3')
+                        and !#strings.endsWith(question.mediaUrl,'.ogg')
+                        and !#strings.endsWith(question.mediaUrl,'.wav')}">
             <img th:src="${question.mediaUrl}" th:alt="'Image for: ' + ${question.title}" loading="lazy"/>
           </div>
 

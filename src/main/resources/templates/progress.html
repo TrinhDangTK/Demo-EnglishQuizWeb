@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{_layout :: head('My Progress')}"></head>
+<body>
+
+<nav th:replace="~{_layout :: navbar}"></nav>
+
+<div class="page-wrapper">
+
+  <div th:replace="~{_layout :: breadcrumb(${#lists.toList({
+    {label:'Home', url:'/'},
+    {label:'My Progress', url:null}
+  })})}"></div>
+
+  <!-- ── Header ────────────────────────────────────────── -->
+  <div class="hero" style="margin-bottom:1.5rem">
+    <h1 class="page-title">My Progress</h1>
+    <p class="page-sub">Track your quiz journey across all categories and levels.</p>
+  </div>
+
+  <!-- ── Summary stats ─────────────────────────────────── -->
+  <div class="prog-stats">
+    <div class="prog-stat prog-stat--green">
+      <span class="prog-stat-num" th:text="${totalCompleted}">0</span>
+      <span class="prog-stat-label">Completed</span>
+    </div>
+    <div class="prog-stat prog-stat--amber">
+      <span class="prog-stat-num" th:text="${totalInProgress}">0</span>
+      <span class="prog-stat-label">In&nbsp;Progress</span>
+    </div>
+    <div class="prog-stat prog-stat--gray">
+      <span class="prog-stat-num" th:text="${totalNotStarted}">0</span>
+      <span class="prog-stat-label">Not&nbsp;Started</span>
+    </div>
+  </div>
+
+  <!-- ── Empty state ───────────────────────────────────── -->
+  <div th:if="${#lists.isEmpty(catProgressList)}" class="empty-box" style="margin-top:2rem">
+    <h3>No quizzes yet</h3>
+    <p>Start a quiz to track your progress here.</p>
+    <a th:href="@{/}" class="btn btn-primary" style="margin-top:1rem">Browse categories</a>
+  </div>
+
+  <!-- ── Category cards ────────────────────────────────── -->
+  <div class="prog-categories" th:unless="${#lists.isEmpty(catProgressList)}">
+
+    <div class="prog-cat-card" th:each="cat : ${catProgressList}">
+
+      <!-- Card header -->
+      <div class="prog-cat-header">
+        <div class="prog-cat-title-row">
+          <h2 class="prog-cat-title" th:text="${cat.category.title}">Category</h2>
+          <span class="prog-cat-count">
+            <span th:text="${cat.completedCount}">0</span>/<span th:text="${cat.totalLevels}">0</span> levels
+          </span>
+        </div>
+        <!-- Progress bar -->
+        <div class="prog-bar-wrap">
+          <div class="prog-bar-fill"
+               th:style="'width:' + ${cat.completionPct} + '%'"
+               th:classappend="${cat.completionPct == 100} ? 'prog-bar-fill--full' : ''">
+          </div>
+        </div>
+        <div class="prog-bar-label">
+          <span th:text="${cat.completionPct} + '% complete'">0% complete</span>
+          <span th:if="${cat.inProgressCount > 0}" class="prog-inprog-label"
+                th:text="${cat.inProgressCount} + ' in progress'"></span>
+        </div>
+      </div>
+
+      <!-- Level rows -->
+      <ul class="prog-level-list">
+        <li class="prog-level-row" th:each="lp : ${cat.levels}">
+
+          <!-- Status icon -->
+          <span class="prog-status-icon"
+                th:classappend="${lp.status == 'COMPLETED'} ? 'prog-status-icon--done'
+                              : (${lp.status == 'IN_PROGRESS'} ? 'prog-status-icon--wip' : 'prog-status-icon--new')"
+                aria-hidden="true">
+            <th:block th:if="${lp.status == 'COMPLETED'}">✓</th:block>
+            <th:block th:if="${lp.status == 'IN_PROGRESS'}">⋯</th:block>
+            <th:block th:if="${lp.status == 'NOT_STARTED'}">○</th:block>
+          </span>
+
+          <!-- Level info -->
+          <div class="prog-level-info">
+            <span class="prog-level-name" th:text="'Level ' + ${lp.level.levelName}">Level 1</span>
+
+            <!-- Completed: score bar -->
+            <div th:if="${lp.status == 'COMPLETED'}" class="prog-detail">
+              <div class="prog-score-bar-wrap">
+                <div class="prog-score-bar-fill"
+                     th:style="'width:' + ${lp.scorePct()} + '%'"
+                     th:classappend="${lp.scorePct() >= 80} ? 'prog-score-bar-fill--high'
+                                  : (${lp.scorePct() >= 50} ? 'prog-score-bar-fill--mid' : 'prog-score-bar-fill--low')">
+                </div>
+              </div>
+              <span class="prog-score-text" th:if="${lp.score != null}"
+                    th:text="${lp.score} + '/' + ${lp.scoreTotal} + ' correct (' + ${lp.scorePct()} + '%)'">
+              </span>
+              <span class="prog-score-text" th:unless="${lp.score != null}">Completed</span>
+            </div>
+
+            <!-- In progress: answered count -->
+            <div th:if="${lp.status == 'IN_PROGRESS'}" class="prog-detail">
+              <div class="prog-score-bar-wrap">
+                <div class="prog-score-bar-fill prog-score-bar-fill--amber"
+                     th:style="'width:' + ${lp.answeredPct()} + '%'">
+                </div>
+              </div>
+              <span class="prog-score-text"
+                    th:text="${lp.answeredCount} + '/' + ${lp.totalQuestions} + ' answered'">
+              </span>
+            </div>
+
+            <!-- Not started -->
+            <div th:if="${lp.status == 'NOT_STARTED'}" class="prog-detail">
+              <span class="prog-score-text prog-score-text--muted">Not started yet</span>
+            </div>
+          </div>
+
+          <!-- Action button -->
+          <div class="prog-level-actions">
+            <a th:if="${lp.status == 'NOT_STARTED'}"
+               th:href="@{'/quiz/' + ${cat.category.id} + '/' + ${lp.level.id}}"
+               class="btn btn-ghost btn-sm">Start</a>
+            <a th:if="${lp.status == 'IN_PROGRESS'}"
+               th:href="@{'/quiz/' + ${cat.category.id} + '/' + ${lp.level.id}}"
+               class="btn btn-primary btn-sm">Continue</a>
+            <a th:if="${lp.status == 'COMPLETED'}"
+               th:href="@{'/quiz/' + ${cat.category.id} + '/' + ${lp.level.id}}"
+               class="btn btn-ghost btn-sm">View result</a>
+          </div>
+
+        </li>
+      </ul>
+
+    </div><!-- /.prog-cat-card -->
+  </div><!-- /.prog-categories -->
+
+</div><!-- /.page-wrapper -->
+
+<footer th:replace="~{_layout :: footer}"></footer>
+
+</body>
+</html>

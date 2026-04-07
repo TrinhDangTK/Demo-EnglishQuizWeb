@@ -9,13 +9,14 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.time.LocalDateTime;
 
-@ControllerAdvice
+@ControllerAdvice(annotations = Controller.class)
 public class GlobalModelAttributes {
     private final RememberLoginTokenRepository rememberLoginTokenRepository;
     private final UserAccountRepository userAccountRepository;
@@ -39,7 +40,22 @@ public class GlobalModelAttributes {
         Object role = session.getAttribute(AuthController.SESSION_ROLE_KEY);
         model.addAttribute("loggedIn", currentUsername != null);
         model.addAttribute("currentUsername", currentUsername);
+        String displayLabel = "";
+        if (currentUsername != null) {
+            Object dn = session.getAttribute(AuthController.SESSION_DISPLAY_NAME_KEY);
+            if (dn instanceof String s && !s.isBlank()) {
+                displayLabel = s;
+            } else {
+                displayLabel = currentUsername.toString();
+            }
+        }
+        model.addAttribute("currentDisplayName", displayLabel);
         model.addAttribute("isAdmin", AuthController.ROLE_ADMIN.equals(role));
+
+        Object tierObj = session.getAttribute(AuthController.SESSION_TIER_KEY);
+        int userTier = (tierObj instanceof Integer t) ? t : AuthController.TIER_NORMAL;
+        model.addAttribute("userTier", userTier);
+        model.addAttribute("isVip", userTier >= AuthController.TIER_VIP);
     }
 
     private void restoreSessionFromRememberCookie(HttpServletRequest request, HttpServletResponse response, HttpSession session) {
@@ -71,7 +87,9 @@ public class GlobalModelAttributes {
             roleName = AuthController.ROLE_USER;
         }
         session.setAttribute(AuthController.SESSION_USER_KEY, user.getUsername());
+        session.setAttribute(AuthController.SESSION_DISPLAY_NAME_KEY, AuthController.resolveDisplayName(user));
         session.setAttribute(AuthController.SESSION_ROLE_KEY, roleName);
+        session.setAttribute(AuthController.SESSION_TIER_KEY, user.getTier() != null ? user.getTier() : AuthController.TIER_NORMAL);
     }
 
     private String extractCookieValue(HttpServletRequest request, String name) {

@@ -1,8 +1,10 @@
 package EnglishQuiz.controller;
 
 import EnglishQuiz.dto.QuizSession;
+import EnglishQuiz.model.Category;
 import EnglishQuiz.model.Level;
 import EnglishQuiz.model.Question;
+import EnglishQuiz.repository.CategoryRepository;
 import EnglishQuiz.repository.LevelRepository;
 import EnglishQuiz.service.QuizProgressService;
 import EnglishQuiz.service.QuizService;
@@ -11,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,27 +25,33 @@ public class QuizController {
 
     private final QuizService quizService;
     private final LevelRepository levelRepository;
+    private final CategoryRepository categoryRepository;
     private final QuizProgressService quizProgressService;
 
     public QuizController(QuizService quizService,
                           LevelRepository levelRepository,
+                          CategoryRepository categoryRepository,
                           QuizProgressService quizProgressService) {
         this.quizService = quizService;
         this.levelRepository = levelRepository;
+        this.categoryRepository = categoryRepository;
         this.quizProgressService = quizProgressService;
     }
 
     @GetMapping("/quiz/{levelId}")
-    public String startQuiz(@PathVariable int levelId, HttpSession session, Model model) {
+    public String startQuiz(@PathVariable int levelId, HttpSession session, Model model,
+                            RedirectAttributes redirectAttributes) {
         Level level = levelRepository.findById(levelId).orElse(null);
         if (level == null || level.getCategoryId() == null) {
             return "redirect:/";
         }
-        return startQuiz(level.getCategoryId(), levelId, session, model);
+        return startQuiz(level.getCategoryId(), levelId, session, model, redirectAttributes);
     }
 
     @GetMapping("/quiz/{categoryId}/{levelId}")
-    public String startQuiz(@PathVariable int categoryId, @PathVariable int levelId, HttpSession session, Model model) {
+    public String startQuiz(@PathVariable int categoryId, @PathVariable int levelId,
+                            HttpSession session, Model model,
+                            RedirectAttributes redirectAttributes) {
         Level level = levelRepository.findById(levelId).orElse(null);
         if (level == null || level.getCategoryId() == null) {
             return "redirect:/";
@@ -50,6 +59,18 @@ public class QuizController {
         int resolvedCategoryId = level.getCategoryId();
         if (categoryId != resolvedCategoryId) {
             return "redirect:/quiz/" + resolvedCategoryId + "/" + levelId;
+        }
+
+        // VIP tier check
+        Category category = categoryRepository.findById(resolvedCategoryId).orElse(null);
+        if (category != null && Boolean.TRUE.equals(category.getVipOnly())) {
+            Object tierObj = session.getAttribute(AuthController.SESSION_TIER_KEY);
+            int tier = (tierObj instanceof Integer t) ? t : AuthController.TIER_NORMAL;
+            if (tier < AuthController.TIER_VIP) {
+                redirectAttributes.addFlashAttribute("error",
+                        "🔒 This quiz requires a VIP account. Please upgrade to access it.");
+                return "redirect:/upgrade";
+            }
         }
 
         String username = getCurrentUsername(session);
