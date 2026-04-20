@@ -1,22 +1,22 @@
 package EnglishQuiz.controller;
 
+import EnglishQuiz.model.RememberLoginToken;
 import EnglishQuiz.model.Role;
 import EnglishQuiz.model.UserAccount;
-import EnglishQuiz.model.RememberLoginToken;
-
 import EnglishQuiz.repository.RememberLoginTokenRepository;
 import EnglishQuiz.repository.RoleRepository;
 import EnglishQuiz.repository.UserAccountRepository;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -25,14 +25,22 @@ import java.util.UUID;
 
 @Controller
 public class AuthController {
+
+    // ── Session attribute keys ───────────────────────────────
     public static final String SESSION_USER_KEY = "currentUsername";
     public static final String SESSION_DISPLAY_NAME_KEY = "currentDisplayName";
     public static final String SESSION_ROLE_KEY = "currentUserRole";
     public static final String SESSION_TIER_KEY = "currentUserTier";
+
+    // ── Tier constants ───────────────────────────────────────
     public static final int TIER_NORMAL = 1;
     public static final int TIER_VIP = 2;
+
+    // ── Role constants ───────────────────────────────────────
     public static final String ROLE_ADMIN = "ADMIN";
     public static final String ROLE_USER = "USER";
+
+    // ── Remember-me ──────────────────────────────────────────
     public static final String REMEMBER_ME_COOKIE = "remember_login_token";
     private static final int REMEMBER_ME_DAYS = 30;
 
@@ -48,9 +56,11 @@ public class AuthController {
         this.rememberLoginTokenRepository = rememberLoginTokenRepository;
     }
 
+    // ── Login ────────────────────────────────────────────────
+
     @GetMapping("/login")
     public String loginPage(HttpSession session) {
-        if (isLoggedIn(session)) {
+        if (SessionUtils.getCurrentUsername(session) != null) {
             return "redirect:/";
         }
         return "login";
@@ -77,21 +87,21 @@ public class AuthController {
             return buildLoginRedirect(redirect);
         }
 
-        session.setAttribute(SESSION_USER_KEY, user.getUsername());
-        session.setAttribute(SESSION_DISPLAY_NAME_KEY, resolveDisplayName(user));
-        session.setAttribute(SESSION_ROLE_KEY, resolveRoleName(user.getRoleId()));
-        session.setAttribute(SESSION_TIER_KEY, user.getTier() != null ? user.getTier() : TIER_NORMAL);
+        populateSession(session, user);
         handleRememberMe(user.getUsername(), rememberMe, request, response);
         redirectAttributes.addFlashAttribute("success", "Login successful.");
+
         if (isSafeLocalRedirect(redirect)) {
             return "redirect:" + redirect;
         }
         return "redirect:/";
     }
 
+    // ── Register ─────────────────────────────────────────────
+
     @GetMapping("/register")
     public String registerPage(HttpSession session) {
-        if (isLoggedIn(session)) {
+        if (SessionUtils.getCurrentUsername(session) != null) {
             return "redirect:/";
         }
         return "register";
@@ -127,28 +137,33 @@ public class AuthController {
         account.setRoleId(resolveDefaultUserRoleId());
         userAccountRepository.save(account);
 
-        session.setAttribute(SESSION_USER_KEY, account.getUsername());
-        session.setAttribute(SESSION_DISPLAY_NAME_KEY, resolveDisplayName(account));
-        session.setAttribute(SESSION_ROLE_KEY, resolveRoleName(account.getRoleId()));
-        session.setAttribute(SESSION_TIER_KEY, TIER_NORMAL);
+        populateSession(session, account);
         redirectAttributes.addFlashAttribute("success", "Account created and logged in.");
         return "redirect:/";
     }
 
+    // ── Logout ───────────────────────────────────────────────
+
     @GetMapping("/logout")
     public String logout(HttpServletRequest request, HttpServletResponse response, HttpSession session) {
-        String token = extractCookieValue(request, REMEMBER_ME_COOKIE);
+        String token = SessionUtils.extractCookieValue(request, REMEMBER_ME_COOKIE);
         if (token != null && !token.isBlank()) {
             rememberLoginTokenRepository.findByToken(token)
                     .ifPresent(rememberLoginTokenRepository::delete);
         }
-        clearRememberCookie(response);
+        SessionUtils.clearRememberCookie(response);
         session.invalidate();
         return "redirect:/login";
     }
 
-    private boolean isLoggedIn(HttpSession session) {
-        return session.getAttribute(SESSION_USER_KEY) != null;
+    // ── Helpers ──────────────────────────────────────────────
+
+    /** Populates session attributes from a user entity. */
+    private void populateSession(HttpSession session, UserAccount user) {
+        session.setAttribute(SESSION_USER_KEY, user.getUsername());
+        session.setAttribute(SESSION_DISPLAY_NAME_KEY, resolveDisplayName(user));
+        session.setAttribute(SESSION_ROLE_KEY, resolveRoleName(user.getRoleId()));
+        session.setAttribute(SESSION_TIER_KEY, user.getTier() != null ? user.getTier() : TIER_NORMAL);
     }
 
     private boolean isValidUsername(String username) {
@@ -172,10 +187,7 @@ public class AuthController {
             return ROLE_USER;
         }
         String normalized = role.trim().toUpperCase();
-        if (ROLE_ADMIN.equals(normalized)) {
-            return ROLE_ADMIN;
-        }
-        return ROLE_USER;
+        return ROLE_ADMIN.equals(normalized) ? ROLE_ADMIN : ROLE_USER;
     }
 
     private Integer resolveDefaultUserRoleId() {
@@ -188,7 +200,7 @@ public class AuthController {
                 });
     }
 
-    private String resolveRoleName(Integer roleId) {
+    String resolveRoleName(Integer roleId) {
         if (roleId == null) {
             return ROLE_USER;
         }
@@ -197,18 +209,19 @@ public class AuthController {
                 .orElse(ROLE_USER);
     }
 
-    private void handleRememberMe(String username, boolean rememberMe, HttpServletRequest request, HttpServletResponse response) {
-        String oldToken = extractCookieValue(request, REMEMBER_ME_COOKIE);
+    private void handleRememberMe(String username, boolean rememberMe,
+                                  HttpServletRequest request, HttpServletResponse response) {
+        String oldToken = SessionUtils.extractCookieValue(request, REMEMBER_ME_COOKIE);
         if (oldToken != null && !oldToken.isBlank()) {
             rememberLoginTokenRepository.findByToken(oldToken)
                     .ifPresent(rememberLoginTokenRepository::delete);
         }
         if (!rememberMe) {
-            clearRememberCookie(response);
+            SessionUtils.clearRememberCookie(response);
             return;
         }
 
-        String token = UUID.randomUUID().toString() + "-" + UUID.randomUUID();
+        String token = UUID.randomUUID() + "-" + UUID.randomUUID();
         RememberLoginToken rememberToken = new RememberLoginToken();
         rememberToken.setUsername(username);
         rememberToken.setToken(token);
@@ -220,27 +233,6 @@ public class AuthController {
         cookie.setPath("/");
         cookie.setMaxAge(REMEMBER_ME_DAYS * 24 * 60 * 60);
         response.addCookie(cookie);
-    }
-
-    private void clearRememberCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie(REMEMBER_ME_COOKIE, "");
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-    }
-
-    private String extractCookieValue(HttpServletRequest request, String name) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-        for (Cookie cookie : cookies) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
     }
 
     /** Label shown in the navbar: full name if set, otherwise username. */

@@ -3,6 +3,7 @@ package EnglishQuiz.controller;
 import EnglishQuiz.model.UserAccount;
 import EnglishQuiz.repository.UserAccountRepository;
 import EnglishQuiz.service.MomoService;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.net.URLEncoder;
@@ -23,7 +25,7 @@ public class UpgradeController {
     private static final Logger log = LoggerFactory.getLogger(UpgradeController.class);
 
     /** VIP upgrade price in VND */
-    private static final long VIP_PRICE = 199000;
+    private static final long VIP_PRICE = 199_000;
 
     private final UserAccountRepository userAccountRepository;
     private final MomoService momoService;
@@ -34,12 +36,12 @@ public class UpgradeController {
         this.momoService = momoService;
     }
 
-    // ── Upgrade page ──────────────────────────────────────────
+    // ── Upgrade page ─────────────────────────────────────────
 
     @GetMapping("/upgrade")
     public String upgradePage(HttpSession session, Model model) {
-        Object nameObj = session.getAttribute(AuthController.SESSION_USER_KEY);
-        if (!(nameObj instanceof String username) || username.isBlank()) {
+        String username = SessionUtils.getCurrentUsername(session);
+        if (username == null) {
             return "redirect:/login?redirect=" + URLEncoder.encode("/upgrade", StandardCharsets.UTF_8);
         }
 
@@ -51,12 +53,12 @@ public class UpgradeController {
         return "upgrade";
     }
 
-    // ── Create MoMo payment ───────────────────────────────────
+    // ── Create MoMo payment ──────────────────────────────────
 
     @PostMapping("/upgrade")
     public String createMomoPayment(HttpSession session, RedirectAttributes redirectAttributes) {
-        Object nameObj = session.getAttribute(AuthController.SESSION_USER_KEY);
-        if (!(nameObj instanceof String username) || username.isBlank()) {
+        String username = SessionUtils.getCurrentUsername(session);
+        if (username == null) {
             return "redirect:/login?redirect=" + URLEncoder.encode("/upgrade", StandardCharsets.UTF_8);
         }
 
@@ -69,10 +71,8 @@ public class UpgradeController {
         }
 
         try {
-            // Encode username in extraData so we can identify the user on callback
             String extraData = Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8));
             String orderInfo = "EnglishQuiz VIP Upgrade - " + username;
-
             String payUrl = momoService.createPaymentUrl(VIP_PRICE, orderInfo, extraData);
 
             if (payUrl != null && !payUrl.isBlank()) {
@@ -90,7 +90,7 @@ public class UpgradeController {
         }
     }
 
-    // ── MoMo callback (redirect after payment) ────────────────
+    // ── MoMo callback (redirect after payment) ──────────────
 
     @GetMapping("/payment/momo-return")
     public String momoReturn(
@@ -135,7 +135,6 @@ public class UpgradeController {
         }
 
         if (resultCode != null && resultCode == 0) {
-            // Payment successful — upgrade user to VIP
             String username = decodeUsername(extraData, session);
             if (username != null) {
                 upgradeUserToVip(username, session);
@@ -153,10 +152,10 @@ public class UpgradeController {
         return "redirect:/upgrade";
     }
 
-    // ── MoMo IPN (server-to-server notification) ──────────────
+    // ── MoMo IPN (server-to-server notification) ─────────────
 
     @PostMapping("/payment/momo-ipn")
-    @org.springframework.web.bind.annotation.ResponseBody
+    @ResponseBody
     public String momoIpn(
             @RequestParam(required = false) String partnerCode,
             @RequestParam(required = false) String orderId,
@@ -182,14 +181,12 @@ public class UpgradeController {
             }
         }
 
-        // MoMo expects a 204 No Content or a JSON response
         return "{\"status\":\"ok\"}";
     }
 
-    // ── Helpers ────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────
 
     private String decodeUsername(String extraData, HttpSession session) {
-        // Try to decode from extraData (Base64-encoded username)
         if (extraData != null && !extraData.isBlank()) {
             try {
                 return new String(Base64.getDecoder().decode(extraData), StandardCharsets.UTF_8);
@@ -197,12 +194,8 @@ public class UpgradeController {
                 log.warn("Could not decode extraData: {}", extraData);
             }
         }
-        // Fallback to session
         if (session != null) {
-            Object nameObj = session.getAttribute(AuthController.SESSION_USER_KEY);
-            if (nameObj instanceof String username && !username.isBlank()) {
-                return username;
-            }
+            return SessionUtils.getCurrentUsername(session);
         }
         return null;
     }
@@ -222,7 +215,6 @@ public class UpgradeController {
         userAccountRepository.save(user);
         log.info("User '{}' upgraded to VIP", username);
 
-        // Update session if available
         if (session != null) {
             session.setAttribute(AuthController.SESSION_TIER_KEY, AuthController.TIER_VIP);
         }

@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 public class CategoryController {
+
     private final CategoryRepository categoryRepository;
     private final LevelRepository levelRepository;
 
@@ -48,7 +48,7 @@ public class CategoryController {
         return categories.stream()
                 .map(cat -> new CategorySearchItem(cat.getId(), cat.getTitle(),
                         Boolean.TRUE.equals(cat.getVipOnly())))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public record CategorySearchItem(Integer id, String title, boolean vipOnly) {}

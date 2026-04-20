@@ -31,6 +31,7 @@ body {
   color: var(--ink);
   min-height: 100vh;
   line-height: 1.6;
+  padding-bottom: 64px;
 }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
@@ -596,52 +597,7 @@ button { cursor: pointer; font-family: inherit; }
   display: inline-flex;
 }
 
-/* ─── Demo page ─────────────────────────────────────────── */
-.demo-section { max-width: 800px; }
-.demo-title { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; margin-bottom: .5rem; }
-.demo-subtitle { color: var(--ink-2); margin-bottom: 2rem; font-size: .95rem; }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-.stat-box {
-  background: var(--bg-card);
-  border: 1.5px solid var(--bg-light);
-  border-radius: var(--radius);
-  padding: 1.4rem;
-  text-align: center;
-  box-shadow: var(--shadow);
-}
-.stat-number {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--accent);
-  font-family: 'DM Mono', monospace;
-  line-height: 1;
-  margin-bottom: .3rem;
-}
-.stat-label { font-size: .78rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-.feature-card {
-  background: var(--bg-card);
-  border: 1.5px solid var(--bg-light);
-  border-radius: var(--radius);
-  padding: 1.2rem;
-  box-shadow: var(--shadow);
-}
-.feature-title { font-size: .95rem; font-weight: 600; margin-bottom: .4rem; }
-.feature-card p { font-size: .85rem; color: var(--ink-2); line-height: 1.5; }
-
-.demo-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; }
 
 /* ─── Auth pages ─────────────────────────────────────────── */
 .auth-wrapper {
@@ -691,13 +647,13 @@ button { cursor: pointer; font-family: inherit; }
   width: 100%;
 }
 
-/* Đẩy padding phải để chữ không đè lên icon */
+/* Push right padding so text does not overlap the toggle icon */
 .auth-form .password-wrap input[type="password"],
 .auth-form .password-wrap input[type="text"] {
   padding-right: 2.8rem !important;
 }
 
-/* Nút nằm absolute bên trong ô input */
+/* Toggle button positioned inside the input field */
 .password-wrap .password-toggle {
   position: absolute;
   top: 50%;
@@ -914,9 +870,7 @@ button { cursor: pointer; font-family: inherit; }
   font-size: .85rem;
 }
 
-body {
-  padding-bottom: 64px;
-}
+
 
 /* ─── Admin management ──────────────────────────────────── */
 .admin-section {

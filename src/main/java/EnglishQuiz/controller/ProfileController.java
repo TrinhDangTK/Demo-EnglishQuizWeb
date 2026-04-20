@@ -2,20 +2,22 @@ package EnglishQuiz.controller;
 
 import EnglishQuiz.model.UserAccount;
 import EnglishQuiz.repository.UserAccountRepository;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @Controller
 public class ProfileController {
+
     private static final int FULL_NAME_MAX = 120;
     private static final int EMAIL_MAX = 255;
 
@@ -92,9 +94,11 @@ public class ProfileController {
         return "redirect:/profile";
     }
 
+    // ── Helpers ──────────────────────────────────────────────
+
     private UserAccount requireCurrentUser(HttpSession session) {
-        Object nameObj = session.getAttribute(AuthController.SESSION_USER_KEY);
-        if (!(nameObj instanceof String username) || username.isBlank()) {
+        String username = SessionUtils.getCurrentUsername(session);
+        if (username == null) {
             return null;
         }
         return userAccountRepository.findByUsernameIgnoreCase(username.trim()).orElse(null);

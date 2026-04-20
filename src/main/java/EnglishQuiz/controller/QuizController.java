@@ -9,10 +9,14 @@ import EnglishQuiz.repository.LevelRepository;
 import EnglishQuiz.service.QuizProgressService;
 import EnglishQuiz.service.QuizService;
 import EnglishQuiz.service.QuizService.RichResult;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
@@ -21,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Controller
 public class QuizController {
+
     private static final String ACTIVE_QUIZ_SESSION_KEY = "quizSession";
 
     private final QuizService quizService;
@@ -37,6 +42,8 @@ public class QuizController {
         this.categoryRepository = categoryRepository;
         this.quizProgressService = quizProgressService;
     }
+
+    // ── Start quiz ───────────────────────────────────────────
 
     @GetMapping("/quiz/{levelId}")
     public String startQuiz(@PathVariable int levelId, HttpSession session, Model model,
@@ -73,7 +80,7 @@ public class QuizController {
             }
         }
 
-        String username = getCurrentUsername(session);
+        String username = SessionUtils.getCurrentUsername(session);
         if (username != null) {
             QuizSession savedSession = quizProgressService.load(username, resolvedCategoryId, levelId).orElse(null);
             if (savedSession != null && !savedSession.getQuestionIds().isEmpty()) {
@@ -83,24 +90,25 @@ public class QuizController {
         }
 
         List<Question> questions = quizService.getQuestions(levelId);
-        
         if (questions == null || questions.isEmpty()) {
             model.addAttribute("error", "No questions found for this level");
             return "redirect:/levels/" + resolvedCategoryId;
         }
-        
+
         QuizSession quizSession = new QuizSession();
         quizSession.setCategoryId(resolvedCategoryId);
         quizSession.setLevelId(levelId);
         quizSession.setQuestionIds(questions.stream()
-            .map(Question::getId)
-            .collect(Collectors.toList()));
+                .map(Question::getId)
+                .collect(Collectors.toList()));
         quizSession.setCurrentIndex(0);
-        
+
         session.setAttribute(ACTIVE_QUIZ_SESSION_KEY, quizSession);
         persistProgress(session, quizSession);
         return "redirect:/quiz/question";
     }
+
+    // ── Show question ────────────────────────────────────────
 
     @GetMapping("/quiz/question")
     public String showQuestion(HttpSession session, Model model) {
@@ -121,13 +129,12 @@ public class QuizController {
         int currentIndex = quizSession.getCurrentIndex();
         int questionId = quizSession.getQuestionIds().get(currentIndex);
         Question question = quizService.getQuestionById(questionId);
-
         if (question == null) {
             return "redirect:/";
         }
 
         List<Integer> selectedAnswers = quizSession.getAnswers()
-            .getOrDefault(questionId, new ArrayList<>());
+                .getOrDefault(questionId, new ArrayList<>());
 
         model.addAttribute("question", question);
         model.addAttribute("currentIndex", currentIndex);
@@ -136,14 +143,16 @@ public class QuizController {
         model.addAttribute("answeredCount", quizSession.getAnsweredCount());
         model.addAttribute("quizSession", quizSession);
         model.addAttribute("isLastQuestion", currentIndex == quizSession.getTotalQuestions() - 1);
-        
+
         return "quiz";
     }
 
+    // ── Save answer ──────────────────────────────────────────
+
     @PostMapping("/quiz/answer")
     public String saveAnswer(@RequestParam(required = false) List<Integer> answerIds,
-                           @RequestParam String action,
-                           HttpSession session) {
+                             @RequestParam String action,
+                             HttpSession session) {
         QuizSession quizSession = (QuizSession) session.getAttribute(ACTIVE_QUIZ_SESSION_KEY);
         if (quizSession == null) {
             return "redirect:/";
@@ -154,7 +163,7 @@ public class QuizController {
 
         int currentIndex = quizSession.getCurrentIndex();
         int questionId = quizSession.getQuestionIds().get(currentIndex);
-        
+
         if (answerIds != null && !answerIds.isEmpty()) {
             quizSession.getAnswers().put(questionId, new ArrayList<>(answerIds));
         } else {
@@ -163,16 +172,10 @@ public class QuizController {
 
         if ("next".equals(action) && currentIndex < quizSession.getTotalQuestions() - 1) {
             quizSession.setCurrentIndex(currentIndex + 1);
-            persistProgress(session, quizSession);
-            return "redirect:/quiz/question";
         } else if ("previous".equals(action) && currentIndex > 0) {
             quizSession.setCurrentIndex(currentIndex - 1);
-            persistProgress(session, quizSession);
-            return "redirect:/quiz/question";
         } else if ("submit".equals(action)) {
             quizSession.setSubmitted(true);
-            persistProgress(session, quizSession);
-            return "redirect:/quiz/result";
         } else if (action.startsWith("goto-")) {
             try {
                 int targetIndex = Integer.parseInt(action.substring(5));
@@ -180,13 +183,13 @@ public class QuizController {
                     quizSession.setCurrentIndex(targetIndex);
                 }
             } catch (NumberFormatException ignored) {}
-            persistProgress(session, quizSession);
-            return "redirect:/quiz/question";
         }
 
         persistProgress(session, quizSession);
-        return "redirect:/quiz/question";
+        return quizSession.isSubmitted() ? "redirect:/quiz/result" : "redirect:/quiz/question";
     }
+
+    // ── Show result ──────────────────────────────────────────
 
     @GetMapping("/quiz/result")
     public String showResult(HttpSession session, Model model) {
@@ -209,6 +212,8 @@ public class QuizController {
         return "result";
     }
 
+    // ── Reset quiz ───────────────────────────────────────────
+
     @PostMapping("/quiz/reset")
     public String resetQuiz(@RequestParam(required = false) Integer categoryId,
                             @RequestParam(required = false) Integer levelId,
@@ -217,7 +222,7 @@ public class QuizController {
             session.removeAttribute(ACTIVE_QUIZ_SESSION_KEY);
             return "redirect:/";
         }
-        String username = getCurrentUsername(session);
+        String username = SessionUtils.getCurrentUsername(session);
         if (username != null) {
             quizProgressService.delete(username, categoryId, levelId);
         }
@@ -229,18 +234,12 @@ public class QuizController {
         return "redirect:/quiz/" + categoryId + "/" + levelId;
     }
 
+    // ── Helpers ──────────────────────────────────────────────
+
     private void persistProgress(HttpSession session, QuizSession quizSession) {
-        String username = getCurrentUsername(session);
+        String username = SessionUtils.getCurrentUsername(session);
         if (username != null) {
             quizProgressService.save(username, quizSession);
         }
-    }
-
-    private String getCurrentUsername(HttpSession session) {
-        Object value = session.getAttribute(AuthController.SESSION_USER_KEY);
-        if (value instanceof String username && !username.isBlank()) {
-            return username;
-        }
-        return null;
     }
 }

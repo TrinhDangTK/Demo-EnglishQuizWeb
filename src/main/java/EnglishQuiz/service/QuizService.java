@@ -7,7 +7,12 @@ import EnglishQuiz.repository.AnswerRepository;
 import EnglishQuiz.repository.QuestionRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,9 +60,9 @@ public class QuizService {
         for (Question q : questions) {
             int qId = q.getId();
             List<Integer> chosenIds = quizSession.getAnswers()
-                .getOrDefault(qId, Collections.emptyList());
-            List<Answer> answers = q.getAnswers() == null ? 
-                Collections.emptyList() : q.getAnswers();
+                    .getOrDefault(qId, Collections.emptyList());
+            List<Answer> answers = q.getAnswers() == null
+                    ? Collections.emptyList() : q.getAnswers();
 
             Set<Integer> correctSet = answers.stream()
                     .filter(Answer::isCorrect)
@@ -73,6 +78,8 @@ public class QuizService {
 
         return new RichResult(score, total, items);
     }
+
+    // ── Result DTOs ──────────────────────────────────────────
 
     public static class ResultItem {
         private final Question question;

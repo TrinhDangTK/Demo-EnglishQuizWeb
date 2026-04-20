@@ -5,7 +5,7 @@ import EnglishQuiz.model.UserAccount;
 import EnglishQuiz.repository.RememberLoginTokenRepository;
 import EnglishQuiz.repository.RoleRepository;
 import EnglishQuiz.repository.UserAccountRepository;
-import jakarta.servlet.http.Cookie;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 
 @ControllerAdvice(annotations = Controller.class)
 public class GlobalModelAttributes {
+
     private final RememberLoginTokenRepository rememberLoginTokenRepository;
     private final UserAccountRepository userAccountRepository;
     private final RoleRepository roleRepository;
@@ -36,10 +37,13 @@ public class GlobalModelAttributes {
                                   HttpSession session,
                                   Model model) {
         restoreSessionFromRememberCookie(request, response, session);
+
         Object currentUsername = session.getAttribute(AuthController.SESSION_USER_KEY);
         Object role = session.getAttribute(AuthController.SESSION_ROLE_KEY);
+
         model.addAttribute("loggedIn", currentUsername != null);
         model.addAttribute("currentUsername", currentUsername);
+
         String displayLabel = "";
         if (currentUsername != null) {
             Object dn = session.getAttribute(AuthController.SESSION_DISPLAY_NAME_KEY);
@@ -58,11 +62,13 @@ public class GlobalModelAttributes {
         model.addAttribute("isVip", userTier >= AuthController.TIER_VIP);
     }
 
-    private void restoreSessionFromRememberCookie(HttpServletRequest request, HttpServletResponse response, HttpSession session) {
+    private void restoreSessionFromRememberCookie(HttpServletRequest request,
+                                                  HttpServletResponse response,
+                                                  HttpSession session) {
         if (session.getAttribute(AuthController.SESSION_USER_KEY) != null) {
             return;
         }
-        String token = extractCookieValue(request, AuthController.REMEMBER_ME_COOKIE);
+        String token = SessionUtils.extractCookieValue(request, AuthController.REMEMBER_ME_COOKIE);
         if (token == null || token.isBlank()) {
             return;
         }
@@ -70,14 +76,14 @@ public class GlobalModelAttributes {
                 .findByTokenAndExpiresAtAfter(token, LocalDateTime.now())
                 .orElse(null);
         if (rememberToken == null) {
-            clearRememberCookie(response);
+            SessionUtils.clearRememberCookie(response);
             return;
         }
         UserAccount user = userAccountRepository.findByUsernameIgnoreCase(rememberToken.getUsername()).orElse(null);
         if (user == null) {
             rememberLoginTokenRepository.findByToken(token)
                     .ifPresent(rememberLoginTokenRepository::delete);
-            clearRememberCookie(response);
+            SessionUtils.clearRememberCookie(response);
             return;
         }
         String roleName = roleRepository.findById(user.getRoleId())
@@ -90,26 +96,5 @@ public class GlobalModelAttributes {
         session.setAttribute(AuthController.SESSION_DISPLAY_NAME_KEY, AuthController.resolveDisplayName(user));
         session.setAttribute(AuthController.SESSION_ROLE_KEY, roleName);
         session.setAttribute(AuthController.SESSION_TIER_KEY, user.getTier() != null ? user.getTier() : AuthController.TIER_NORMAL);
-    }
-
-    private String extractCookieValue(HttpServletRequest request, String name) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return null;
-        }
-        for (Cookie cookie : cookies) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
-    }
-
-    private void clearRememberCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie(AuthController.REMEMBER_ME_COOKIE, "");
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
     }
 }

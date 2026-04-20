@@ -33,6 +33,8 @@ CREATE TABLE answer (
   FOREIGN KEY (question_id) REFERENCES question(id)
 );
 
+-- ── Seed data ────────────────────────────────────────────
+
 INSERT INTO category (id, title) VALUES
   (1, 'Grammar Basics'),
   (2, 'Vocabulary'),
@@ -103,15 +105,7 @@ INSERT INTO answer (id, question_id, label, text, is_correct) VALUES
   (5035, 3003, 'C', 'They had no plans', FALSE),
   (5036, 3003, 'D', 'The house was comfortable', FALSE);
 
-  -- Xem role va update role cho user hoac admin sau khi da co tai khoan
-SELECT * FROM role;
--- Gán ADMIN cho user 'admin'
-UPDATE user_account u
-JOIN roles r ON r.name = 'ADMIN'
-SET u.role_id = r.id
-WHERE u.username = 'admin';
--- Gán USER cho user 'user1
-UPDATE user_account u
-JOIN roles r ON r.name = 'USER'
-SET u.role_id = r.id
-WHERE u.username = 'user1';
+-- ── Admin role assignment (run manually after creating accounts) ──
+-- SELECT * FROM roles;
+-- UPDATE user_account u JOIN roles r ON r.name = 'ADMIN' SET u.role_id = r.id WHERE u.username = 'admin';
+-- UPDATE user_account u JOIN roles r ON r.name = 'USER'  SET u.role_id = r.id WHERE u.username = 'user1';

@@ -1,7 +1,14 @@
 package EnglishQuiz.dto;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * Holds the in-memory state of an active quiz attempt for one user,
+ * including selected answers, current index, and submission status.
+ */
 public class QuizSession {
     private int categoryId;
     private int levelId;
@@ -15,6 +22,8 @@ public class QuizSession {
         this.answers = new HashMap<>();
         this.currentIndex = 0;
     }
+
+    // ── Getters / Setters ────────────────────────────────────
 
     public int getCategoryId() { return categoryId; }
     public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
@@ -34,12 +43,14 @@ public class QuizSession {
     public boolean isSubmitted() { return submitted; }
     public void setSubmitted(boolean submitted) { this.submitted = submitted; }
 
+    // ── Derived helpers ──────────────────────────────────────
+
     public int getTotalQuestions() { return questionIds.size(); }
-    
+
     public int getAnsweredCount() {
         return (int) answers.values().stream()
-            .filter(list -> list != null && !list.isEmpty())
-            .count();
+                .filter(list -> list != null && !list.isEmpty())
+                .count();
     }
 
     public boolean isAnswered(int questionId) {

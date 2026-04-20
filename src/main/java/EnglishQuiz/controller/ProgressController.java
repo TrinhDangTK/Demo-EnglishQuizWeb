@@ -9,6 +9,7 @@ import EnglishQuiz.repository.LevelRepository;
 import EnglishQuiz.repository.UserQuizProgressRepository;
 import EnglishQuiz.service.QuizProgressService;
 import EnglishQuiz.service.QuizService;
+import EnglishQuiz.util.SessionUtils;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,10 +34,10 @@ public class ProgressController {
     private final QuizService quizService;
 
     public ProgressController(UserQuizProgressRepository progressRepository,
-                               CategoryRepository categoryRepository,
-                               LevelRepository levelRepository,
-                               QuizProgressService quizProgressService,
-                               QuizService quizService) {
+                              CategoryRepository categoryRepository,
+                              LevelRepository levelRepository,
+                              QuizProgressService quizProgressService,
+                              QuizService quizService) {
         this.progressRepository = progressRepository;
         this.categoryRepository = categoryRepository;
         this.levelRepository = levelRepository;
@@ -46,13 +47,12 @@ public class ProgressController {
 
     @GetMapping("/progress")
     public String progressPage(HttpSession session, Model model) {
-        Object usernameObj = session.getAttribute(AuthController.SESSION_USER_KEY);
-        if (!(usernameObj instanceof String username) || username.isBlank()) {
-            String encoded = URLEncoder.encode("/progress", StandardCharsets.UTF_8);
-            return "redirect:/login?redirect=" + encoded;
+        String username = SessionUtils.getCurrentUsername(session);
+        if (username == null) {
+            return "redirect:/login?redirect=" + URLEncoder.encode("/progress", StandardCharsets.UTF_8);
         }
 
-        // Load tất cả progress records của user, index theo "catId_levelId"
+        // Index all progress records by "catId_levelId"
         List<UserQuizProgress> allProgress = progressRepository.findByUsername(username);
         Map<String, UserQuizProgress> progressMap = allProgress.stream()
                 .collect(Collectors.toMap(
@@ -60,7 +60,7 @@ public class ProgressController {
                         Function.identity()
                 ));
 
-        // Duyệt categories + levels để build DTO hiển thị
+        // Build category progress DTOs
         List<Category> categories = categoryRepository.findAllByOrderByTitleAsc();
         List<CategoryProgressData> catProgressList = new ArrayList<>();
 
@@ -80,13 +80,11 @@ public class ProgressController {
                 LevelProgressData lpd;
 
                 if (prog == null) {
-                    // Chưa bắt đầu
                     lpd = new LevelProgressData(level, "NOT_STARTED",
                             0, 0, null, null, null);
                     totalNotStarted++;
 
                 } else if (prog.isSubmitted()) {
-                    // Đã nộp — tính điểm
                     Integer score = null;
                     Integer scoreTotal = null;
                     try {
@@ -98,15 +96,13 @@ public class ProgressController {
                             score = result.getScore();
                             scoreTotal = result.getTotal();
                         }
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) {}
                     lpd = new LevelProgressData(level, "COMPLETED",
                             0, 0, score, scoreTotal, prog.getUpdatedAt());
                     catCompleted++;
                     totalCompleted++;
 
                 } else {
-                    // Đang làm dở
                     int answeredCount = 0;
                     int totalQ = 0;
                     try {
@@ -117,8 +113,7 @@ public class ProgressController {
                             answeredCount = qs.getAnsweredCount();
                             totalQ = qs.getTotalQuestions();
                         }
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) {}
                     lpd = new LevelProgressData(level, "IN_PROGRESS",
                             answeredCount, totalQ, null, null, prog.getUpdatedAt());
                     catInProgress++;
@@ -134,7 +129,7 @@ public class ProgressController {
                     cat, totalLevels, catCompleted, catInProgress, completionPct, levelList));
         }
 
-        // Lọc bỏ category không có level nào
+        // Remove categories with no levels
         catProgressList.removeIf(c -> c.totalLevels() == 0);
 
         model.addAttribute("catProgressList", catProgressList);
@@ -145,7 +140,7 @@ public class ProgressController {
         return "progress";
     }
 
-    // ── DTOs ──────────────────────────────────────────────────────────────────
+    // ── DTOs ─────────────────────────────────────────────────
 
     public record LevelProgressData(
             Level level,
@@ -156,13 +151,13 @@ public class ProgressController {
             Integer scoreTotal,
             LocalDateTime updatedAt) {
 
-        /** Phần trăm câu đã trả lời (chỉ dùng khi IN_PROGRESS). */
+        /** Percentage of questions answered (used when IN_PROGRESS). */
         public int answeredPct() {
             if (totalQuestions <= 0) return 0;
             return answeredCount * 100 / totalQuestions;
         }
 
-        /** Phần trăm điểm đúng (chỉ dùng khi COMPLETED). */
+        /** Percentage of correct answers (used when COMPLETED). */
         public int scorePct() {
             if (scoreTotal == null || scoreTotal <= 0) return 0;
             return score * 100 / scoreTotal;
